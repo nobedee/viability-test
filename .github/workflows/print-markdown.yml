@@ -20,6 +20,11 @@ jobs:
         run: |
           echo "Only the repository owner can run this workflow."
           exit 1
+
+      - name: Convert GitHub URL to raw
+        run: |
+          RAW_URL=$(echo "${{ github.event.inputs.md_url }}" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
+          echo "RAW_URL=${RAW_URL}" >> $GITHUB_ENV
           
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -46,8 +51,25 @@ jobs:
           npm init -y
           npm install puppeteer@^24.15.0 marked@^9.0.0
 
+      - name: Convert GitHub Markdown URL to raw URL
+        id: convert_url
+        run: |
+          # This reads the input from the workflow (like user input)
+          MD_URL="${{ github.event.inputs.md_url }}"
+    
+          # Convert standard blob URL to raw URL
+          RAW_URL=$(echo "$MD_URL" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
+    
+          # Save it as an environment variable for later steps
+          echo "RAW_URL=$RAW_URL" >> $GITHUB_ENV
+    
+          # Optional: print to logs for verification
+          echo "Converted raw URL: $RAW_URL"
+
       - name: Render PDF
-        run: node scripts/render-md.js .tmp/input.md .tmp/out/rendered.pdf
+        run: node scripts/render-md.js
+        env:
+          MD_URL: ${{ env.RAW_URL }}
 
       - name: Commit PDF to repo
         run: |
