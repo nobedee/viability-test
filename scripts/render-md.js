@@ -11,92 +11,36 @@
  */
 
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
-import { marked } from 'marked';
-import https from 'https';
-import http from 'http';
+import marked from 'marked';
 
-// Resolve __dirname in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const mdUrl = process.env.MD_URL;
 
-// Get command-line arguments
-const args = process.argv.slice(2);
-if (args.length !== 2) {
-    console.error('Usage: node render-md.js <source-md-path-or-URL> <output-pdf-path>');
-    process.exit(1);
-}
-
-const [source, outputPDF] = args;
-
-// Function to fetch remote Markdown if URL is provided
-async function fetchMarkdown(url) {
-    return new Promise((resolve, reject) => {
-        const client = url.startsWith('https') ? https : http;
-        client.get(url, res => {
-            if (res.statusCode !== 200) {
-                reject(new Error(`Failed to fetch ${url}, status code: ${res.statusCode}`));
-            }
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => resolve(data));
-        }).on('error', reject);
-    });
-}
-
-// Main rendering function
 async function main() {
-    let markdownContent;
+  let markdown;
 
-    // Determine if source is a URL
-    if (source.startsWith('http://') || source.startsWith('https://')) {
-        console.log(`Fetching Markdown from URL: ${source}`);
-        markdownContent = await fetchMarkdown(source);
-    } else {
-        const mdPath = path.resolve(source);
-        if (!fs.existsSync(mdPath)) {
-            console.error(`Markdown file does not exist: ${mdPath}`);
-            process.exit(1);
-        }
-        markdownContent = fs.readFileSync(mdPath, 'utf-8');
-    }
+  if (mdUrl.startsWith('http')) {
+    // Fetch markdown from URL
+    const res = await fetch(mdUrl);
+    if (!res.ok) throw new Error(`Failed to fetch Markdown: ${res.statusText}`);
+    markdown = await res.text();
+  } else {
+    // Fallback: local file
+    markdown = fs.readFileSync(mdUrl, 'utf8');
+  }
 
-    // Convert Markdown to HTML
-    const htmlContent = `
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; }
-          pre { background: #f6f8fa; padding: 10px; overflow-x: auto; }
-          code { font-family: monospace; }
-          h1,h2,h3,h4,h5,h6 { color: #333; }
-          img { max-width: 100%; }
-        </style>
-      </head>
-      <body>
-        ${marked(markdownContent)}
-      </body>
-    </html>
-    `;
+  // Convert Markdown to HTML
+  const html = marked(markdown);
 
-    // Launch Puppeteer and generate PDF
-    console.log(`Rendering PDF to: ${outputPDF}`);
-    const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: outputPDF, format: 'A4', printBackground: true });
-    await browser.close();
+  // Render HTML to PDF using Puppeteer
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  await page.pdf({ path: '.tmp/out/rendered.pdf', format: 'A4' });
+  await browser.close();
 
-    console.log('PDF generation complete!');
+  console.log('PDF generated at .tmp/out/rendered.pdf');
 }
 
-// Run
-main().catch(err => {
-    console.error(err);
-    process.exit(1);
-});
+main();
