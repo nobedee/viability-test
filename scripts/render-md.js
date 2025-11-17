@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
-const marked = require('marked');
+const { marked } = require('marked');
 
 async function main() {
   const mdPath = process.env.MD_PATH || 'README.md';
