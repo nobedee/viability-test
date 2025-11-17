@@ -8,10 +8,19 @@ on:
         required: true
         default: ''
 
+permissions:
+  contents: write
+
 jobs:
   render-and-commit:
     runs-on: ubuntu-latest
     steps:
+      - name: Check if actor is repo owner
+        if: ${{ github.actor != github.repository_owner }}
+        run: |
+          echo "Only the repository owner can run this workflow."
+          exit 1
+          
       - name: Checkout repo
         uses: actions/checkout@v4
 
