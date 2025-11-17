@@ -1,23 +1,27 @@
-name: Render & Print Markdown PDF
+name: Render Markdown to PDF
 
 on:
   workflow_dispatch:
     inputs:
       md_file:
-        description: 'Path to Markdown file to render'
+        description: 'Markdown file to render'
         required: true
         default: 'README.md'
 
 jobs:
   render-md:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+
     steps:
-      # 1️⃣ Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Create temporary Node environment and install dependencies
-      - name: Setup temporary Node environment
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Create temporary package.json
         run: |
           mkdir -p .tmp
           cd .tmp
@@ -26,25 +30,21 @@ jobs:
             "version": "1.0.0",
             "private": true,
             "dependencies": {
-              "puppeteer": "^23.0.0",
+              "puppeteer": "^24.0.0",
               "marked": "^9.0.0"
             }
           }' > package.json
-          npm install
 
-      # 3️⃣ Render Markdown to PDF
+      - name: Install dependencies
+        run: npm --prefix .tmp install
+
       - name: Render Markdown to PDF
-        run: |
-          cp ../scripts/render-md.js .
-          npm install
-          node render-md.js
-        working-directory: .tmp
         env:
-          MD_PATH: ../${{ github.event.inputs.md_file }}
+          MD_PATH: ${{ github.event.inputs.md_file }}
+        run: node .tmp/render-md.js
 
-      # 4️⃣ Upload generated PDF as an artifact
-      - name: Upload PDF artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: markdown-pdf
-          path: .tmp/out/rendered.pdf
+      - name: Show PDF link in Action summary
+        run: |
+          PDF_PATH=".tmp/out/rendered.pdf"
+          PDF_URL="https://github.com/${GITHUB_REPOSITORY}/raw/${GITHUB_REF_NAME}/${PDF_PATH}"
+          echo "Your PDF is ready: [Open PDF in browser]($PDF_URL)" >> $GITHUB_STEP_SUMMARY
