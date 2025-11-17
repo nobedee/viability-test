@@ -49,7 +49,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm init -y
-          npm --prefix .tmp install puppeteer marked node-fetch@3
+          npm install puppeteer@^24.15.0 marked@^9.0.0
 
       - name: Convert GitHub Markdown URL to raw URL
         id: convert_url
