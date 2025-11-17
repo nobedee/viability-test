@@ -49,5 +49,8 @@ jobs:
       - name: Show PDF link in Action summary
         run: |
           PDF_PATH=".tmp/out/rendered.pdf"
-          PDF_URL="https://github.com/${GITHUB_REPOSITORY}/raw/${GITHUB_REF_NAME}/${PDF_PATH}"
-          echo "Your PDF is ready: [Open PDF in browser]($PDF_URL)" >> $GITHUB_STEP_SUMMARY
+          # Extract branch or tag name from GITHUB_REF
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          PDF_URL="https://github.com/${GITHUB_REPOSITORY}/raw/${BRANCH_NAME}/${PDF_PATH}"
+          echo "Your PDF is ready: [Open PDF in browser](${PDF_URL})" >> $GITHUB_STEP_SUMMARY
+        shell: bash
