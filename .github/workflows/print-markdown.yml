@@ -35,8 +35,8 @@ jobs:
       # 3️⃣ Render Markdown to PDF using Puppeteer
       - name: Render Markdown to PDF
         run: |
-          cd .tmp
-          node ../scripts/render-md.js
+          npm --prefix .tmp install
+          node scripts/render-md.js
         env:
           MD_PATH: ${{ github.event.inputs.md_file }}
 
