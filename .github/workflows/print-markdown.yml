@@ -1,56 +1,51 @@
-name: Render Markdown to PDF
+name: Convert Markdown to PDF
 
 on:
   workflow_dispatch:
     inputs:
       md_file:
-        description: 'Markdown file to render'
+        description: 'Markdown file URL or path'
         required: true
-        default: 'README.md'
+        default: ''
 
 jobs:
-  render-md:
-    runs-on: ubuntu-24.04
-
+  render-and-commit:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Create temp folder
+        run: mkdir -p .tmp/out
+
+      - name: Fetch Markdown
+        run: |
+          MD_INPUT="${{ github.event.inputs.md_file }}"
+          if [[ "$MD_INPUT" == http* ]]; then
+            curl -L "$MD_INPUT" -o .tmp/input.md
+          else
+            cp "$MD_INPUT" .tmp/input.md
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Create temporary package.json
+      - name: Install Puppeteer & Marked
         run: |
-          mkdir -p .tmp
-          cd .tmp
-          cp ../scripts/render-md.js .
-          echo '{
-            "name": "md-printer-temp",
-            "version": "1.0.0",
-            "private": true,
-            "dependencies": {
-              "puppeteer": "^24.0.0",
-              "marked": "^9.0.0"
-            }
-          }' > package.json
+          npm init -y
+          npm install puppeteer@^24.15.0 marked@^9.0.0
 
-      - name: Install dependencies
-        working-directory: .tmp
-        run: npm install
+      - name: Render PDF
+        run: node scripts/render-md.js .tmp/input.md .tmp/out/rendered.pdf
 
-      - name: Render Markdown to PDF
-        run: node render-md.js
-        working-directory: .tmp
-        env:
-          MD_PATH: ../${{ github.event.inputs.md_file }}
-
-      - name: Show PDF link in Action summary
+      - name: Commit PDF to repo
         run: |
-          PDF_PATH=".tmp/out/rendered.pdf"
-          # Extract branch or tag name from GITHUB_REF
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          PDF_URL="https://github.com/${GITHUB_REPOSITORY}/raw/${BRANCH_NAME}/${PDF_PATH}"
-          echo "Your PDF is ready: [Open PDF in browser](${PDF_URL})" >> $GITHUB_STEP_SUMMARY
-        shell: bash
+          mkdir -p printmd
+          cp .tmp/out/rendered.pdf printmd/
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add printmd/rendered.pdf
+          git commit -m "Add PDF from ${{ github.event.inputs.md_file }}" || echo "No changes to commit"
+          git push
