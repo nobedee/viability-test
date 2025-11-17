@@ -23,7 +23,7 @@ jobs:
 
       - name: Convert GitHub URL to raw
         run: |
-          RAW_URL=$(echo "${{ github.event.inputs.md_url }}" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
+          RAW_URL=$(echo "${{ github.event.inputs.md_file }}" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
           echo "RAW_URL=${RAW_URL}" >> $GITHUB_ENV
           
       - name: Checkout repo
@@ -54,22 +54,22 @@ jobs:
       - name: Convert GitHub Markdown URL to raw URL
         id: convert_url
         run: |
-          # This reads the input from the workflow (like user input)
-          MD_URL="${{ github.event.inputs.md_url }}"
-    
-          # Convert standard blob URL to raw URL
-          RAW_URL=$(echo "$MD_URL" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
-    
-          # Save it as an environment variable for later steps
+          MD_INPUT="${{ github.event.inputs.md_file }}"
+
+          # Only convert GitHub blob URLs
+          if [[ "$MD_INPUT" =~ ^https://github.com/.*/.*/blob/.* ]]; then
+            RAW_URL=$(echo "$MD_INPUT" | sed -E 's|https://github.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)|https://raw.githubusercontent.com/\1/\2/\3/\4|')
+          else
+            RAW_URL="$MD_INPUT"
+          fi
+
           echo "RAW_URL=$RAW_URL" >> $GITHUB_ENV
-    
-          # Optional: print to logs for verification
           echo "Converted raw URL: $RAW_URL"
 
       - name: Render PDF
         run: node scripts/render-md.js
         env:
-          MD_URL: ${{ env.RAW_URL }}
+          md_file: ${{ env.RAW_URL }}
 
       - name: Commit PDF to repo
         run: |
