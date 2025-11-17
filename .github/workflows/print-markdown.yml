@@ -1,0 +1,48 @@
+name: Render & Print Markdown PDF
+
+on:
+  workflow_dispatch:
+    inputs:
+      md_file:
+        description: 'Path to Markdown file to render'
+        required: true
+        default: 'README.md'
+
+jobs:
+  render-md:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Create temporary Node environment and install dependencies
+      - name: Setup temporary Node environment
+        run: |
+          mkdir -p .tmp
+          cd .tmp
+          echo '{
+            "name": "md-printer-temp",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "puppeteer": "^23.0.0",
+              "marked": "^9.0.0"
+            }
+          }' > package.json
+          npm install
+
+      # 3️⃣ Render Markdown to PDF using Puppeteer
+      - name: Render Markdown to PDF
+        run: |
+          cd .tmp
+          node ../scripts/render-md.js
+        env:
+          MD_PATH: ${{ github.event.inputs.md_file }}
+
+      # 4️⃣ Upload generated PDF as an artifact
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown-pdf
+          path: .tmp/out/rendered.pdf
