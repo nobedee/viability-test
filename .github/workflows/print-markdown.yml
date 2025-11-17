@@ -32,13 +32,15 @@ jobs:
           }' > package.json
           npm install
 
-      # 3️⃣ Render Markdown to PDF using Puppeteer
+      # 3️⃣ Render Markdown to PDF
       - name: Render Markdown to PDF
         run: |
-          npm --prefix .tmp install
-          node scripts/render-md.js
+          cp ../scripts/render-md.js .
+          npm install
+          node render-md.js
+        working-directory: .tmp
         env:
-          MD_PATH: ${{ github.event.inputs.md_file }}
+          MD_PATH: ../${{ github.event.inputs.md_file }}
 
       # 4️⃣ Upload generated PDF as an artifact
       - name: Upload PDF artifact
