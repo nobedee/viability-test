@@ -12,7 +12,7 @@
 
 import fs from 'fs';
 import puppeteer from 'puppeteer';
-import marked from 'marked';
+import { marked } from 'marked';
 
 const mdUrl = process.env.MD_URL;
 
