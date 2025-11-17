@@ -69,7 +69,7 @@ jobs:
       - name: Render PDF
         run: node scripts/render-md.js
         env:
-          md_file: ${{ env.RAW_URL }}
+          MD_URL: ${{ env.RAW_URL }}
 
       - name: Commit PDF to repo
         run: |
