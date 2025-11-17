@@ -25,6 +25,7 @@ jobs:
         run: |
           mkdir -p .tmp
           cd .tmp
+          cp ../scripts/render-md.js .
           echo '{
             "name": "md-printer-temp",
             "version": "1.0.0",
@@ -36,12 +37,13 @@ jobs:
           }' > package.json
 
       - name: Install dependencies
-        run: npm --prefix .tmp install
+        run: npm install
 
       - name: Render Markdown to PDF
+        run: node render-md.js
+        working-directory: .tmp
         env:
-          MD_PATH: ${{ github.event.inputs.md_file }}
-        run: node .tmp/render-md.js
+          MD_PATH: ../${{ github.event.inputs.md_file }}
 
       - name: Show PDF link in Action summary
         run: |
